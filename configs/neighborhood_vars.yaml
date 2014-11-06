@@ -14,6 +14,12 @@ variable_definitions:
     radius: 1500
     apply: np.log1p
 
+  - name: sum_residential_units_3000
+    dataframe: buildings
+    varname: residential_units
+    radius: 3000
+    apply: np.log1p
+
   - name: sum_nonresidential_units
     dataframe: buildings
     varname: job_spaces

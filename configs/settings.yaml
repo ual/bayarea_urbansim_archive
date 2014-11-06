@@ -127,7 +127,7 @@ pusher:
   region: bayarea
 
 
-store: bayarea_v2.h5
+store: bayarea_v3.h5
 
 
 scenario: baseline
