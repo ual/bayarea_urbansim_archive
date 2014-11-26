@@ -61,6 +61,13 @@ def zoning(store):
         df[col] = df2[col]
     return df
 
+@sim.table_source('HUD_below_market_rate_rent')
+def HUD_below_market_rate_rent(store):
+    df = pd.read_csv(os.path.join(misc.data_dir(), "hud_50_pct_AMI_rent.csv"),
+                      index_col="fips")
+    return df
+
+
 
 # zoning for use in the "baseline" scenario
 # comes in the hdf5

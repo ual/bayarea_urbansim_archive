@@ -148,6 +148,14 @@ def parcel_sales_price_sqft(use):
     if use == "residential": s *= 1.2
     return s
 
+### i put this in on 11/12 2014 bc feasibility model error:
+### KeyError: 'injectable not found: parcel_sales_price_sqft'
+#@sim.injectable('parcel_sales_price_sqft', autocall=False)
+#def parcel_sales_price_sqft(use):
+#    s = parcel_average_price(use)
+#    if use == "residential": s *= 1.2
+#    return s
+
 
 @sim.injectable('parcel_is_allowed_func', autocall=False)
 def parcel_is_allowed(form):
