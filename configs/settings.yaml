@@ -130,6 +130,7 @@ pusher:
 
 
 store: bayarea_v3.h5
+#store: bayarea_v2.h5
 
 
 scenario: baseline
@@ -243,3 +244,26 @@ building_sqft_per_job:
   12: 383
   13: 383
   14: 383
+
+county_id_to_fips:
+ 1: 1
+ 7: 13
+ 21: 41
+ 28: 55
+ 38: 75
+ 41: 81
+ 43: 85
+ 48: 95
+ 49: 97
+
+## bmr monthly rent, 2 person unit
+bmr_rent_2_persons:
+  1: 920.0
+  13: 920.0
+  41: 1107.5
+  55: 825.0
+  75: 1107.5
+  81: 1107.5
+  85: 1020.0
+  95: 767.5
+  97: 770.0

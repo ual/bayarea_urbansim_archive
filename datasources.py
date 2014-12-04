@@ -12,6 +12,14 @@ def building_sqft_per_job(settings):
     return settings['building_sqft_per_job']
 
 
+@sim.injectable('county_id_to_fips', cache=True)
+def county_id_to_fips(settings):
+    return settings['county_id_to_fips']
+
+@sim.injectable('bmr_rent_2_persons', cache=True)
+def bmr_rent_2_persons(settings):
+    return settings['bmr_rent_2_persons']
+
 @sim.table_source('jobs')
 def jobs(store):
     nets = store['nets']

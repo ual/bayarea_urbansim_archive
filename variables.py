@@ -123,7 +123,7 @@ def node_id(parcels, homesales):
 # these are actually functions that take parameters, but are parcel-related
 # so are defined here
 @sim.injectable('parcel_average_price', autocall=False)
-def parcel_average_price(use, quantile=.5):
+def parcel_average_price_COPY(use, quantile=.5):
     # I'm testing out a zone aggregation rather than a network aggregation
     # because I want to be able to determine the quantile of the distribution
     # I also want more spreading in the development and not keep it so localized
@@ -135,6 +135,8 @@ def parcel_average_price(use, quantile=.5):
                             groupby(buildings.zone_id).quantile(quantile),
                             sim.get_table('parcels').zone_id)
 
+    
+
     if 'nodes' not in sim.list_tables():
         return pd.Series(0, sim.get_table('parcels').index)
 
@@ -142,8 +144,39 @@ def parcel_average_price(use, quantile=.5):
                         sim.get_table('parcels').node_id)
 
 
+def parcel_average_price(use, quantile=.5):
+    # I'm testing out a zone aggregation rather than a network aggregation
+    # because I want to be able to determine the quantile of the distribution
+    # I also want more spreading in the development and not keep it so localized
+    settings = sim.settings
+    if use == "residential":
+        bmr_prices = sim.get_table('HUD_below_market_rate_rent')
+
+
+        buildings = sim.get_table('buildings')
+        return misc.reindex(buildings.
+                            residential_price[buildings.general_type ==
+                                              "Residential"].
+                            groupby(buildings.zone_id).quantile(quantile),
+                            sim.get_table('parcels').zone_id)
+        
+    
+
+    if 'nodes' not in sim.list_tables():
+        return pd.Series(0, sim.get_table('parcels').index)
+
+    return misc.reindex(sim.get_table('nodes')[use],
+                        sim.get_table('parcels').node_id)
+
 @sim.injectable('parcel_sales_price_sqft_func', autocall=False)
 def parcel_sales_price_sqft(use):
+    s = parcel_average_price(use)
+    if use == "residential": s *= 1.2
+    return s
+
+@sim.injectable('BMR_parcel_sales_price_sqft_func', autocall=False)
+def BMR_parcel_sales_price_sqft(use):
+    bmr_prices = sim.get_table('HUD_below_market_rate_rent')
     s = parcel_average_price(use)
     if use == "residential": s *= 1.2
     return s
