@@ -245,6 +245,8 @@ building_sqft_per_job:
   13: 383
   14: 383
 
+
+## a mapping between the county_id identifier and FIPS code
 county_id_to_fips:
  1: 1
  7: 13

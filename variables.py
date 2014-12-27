@@ -144,21 +144,28 @@ def parcel_average_price_COPY(use, quantile=.5):
                         sim.get_table('parcels').node_id)
 
 
+@sim.injectable('parcel_average_price', autocall=False)
 def parcel_average_price(use, quantile=.5):
-    # I'm testing out a zone aggregation rather than a network aggregation
-    # because I want to be able to determine the quantile of the distribution
-    # I also want more spreading in the development and not keep it so localized
+    # price function attentive to inclusionary housing production. 
+    # their price is not set by the hedonic prices in the zone, but
+    # rather are pre-set relative to HUD levels fetched by jurisdiction 
+    # from a lookup table
+    
     settings = sim.settings
     if use == "residential":
         bmr_prices = sim.get_table('HUD_below_market_rate_rent')
-
-
+        bmr_prices=bmr_prices.to_frame()
+        bmr_prices.index=bmr_prices.county_id
+        
+        parcels = sim.get_table('parcels')
         buildings = sim.get_table('buildings')
-        return misc.reindex(buildings.
-                            residential_price[buildings.general_type ==
-                                              "Residential"].
-                            groupby(buildings.zone_id).quantile(quantile),
-                            sim.get_table('parcels').zone_id)
+        parcels.merge(bmr_prices,left_on='county_id',right_on='county_id')
+        
+        ## is this dangerous, index-wise?
+        ## TODO: add logic testing inclusionary unit rules by jurisdiction.
+        ## this lookup should only be returned for such jurisdictions, and then only for a portion of units
+        
+        return parcels.loc[:,'2-Person']
         
     
 
@@ -167,6 +174,8 @@ def parcel_average_price(use, quantile=.5):
 
     return misc.reindex(sim.get_table('nodes')[use],
                         sim.get_table('parcels').node_id)
+
+
 
 @sim.injectable('parcel_sales_price_sqft_func', autocall=False)
 def parcel_sales_price_sqft(use):

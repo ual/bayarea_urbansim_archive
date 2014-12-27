@@ -156,3 +156,5 @@ sim.broadcast('nodes', 'homesales', cast_index=True, onto_on='node_id')
 sim.broadcast('nodes', 'costar', cast_index=True, onto_on='node_id')
 sim.broadcast('logsums', 'homesales', cast_index=True, onto_on='zone_id')
 sim.broadcast('logsums', 'costar', cast_index=True, onto_on='zone_id')
+sim.broadcast('parcels', 'HUD_below_market_rate_rent', cast_index=True,
+              onto_on='county_id')
