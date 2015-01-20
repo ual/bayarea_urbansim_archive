@@ -20,6 +20,11 @@ def county_id_to_fips(settings):
 def bmr_rent_2_persons(settings):
     return settings['bmr_rent_2_persons']
 
+@sim.injectable('inclusionary_rates', cache=True)
+def inclusionary_rates(settings):
+    return settings['inclusionary_rates']
+
+
 @sim.table_source('jobs')
 def jobs(store):
     nets = store['nets']

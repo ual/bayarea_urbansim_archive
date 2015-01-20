@@ -205,7 +205,7 @@ building_type_map:
 # this maps building "forms" from the developer model
 # to building types so that when the developer builds a
 # "form" this can be converted for storing as a type
-# in the building table - in the long run, the developer
+# in the building table - in the long run the developer
 # forms and the building types should be the same and the
 # developer model should account for the differences
 form_to_btype:
@@ -246,7 +246,8 @@ building_sqft_per_job:
   14: 383
 
 
-## a mapping between the county_id identifier and FIPS code
+
+## a mapping between the internal urbansim county_id identifier and FIPS code
 county_id_to_fips:
  1: 1
  7: 13
@@ -258,7 +259,7 @@ county_id_to_fips:
  48: 95
  49: 97
 
-## bmr monthly rent, 2 person unit
+## FIPS-level bmr monthly rent 2 person unit. From HUD
 bmr_rent_2_persons:
   1: 920.0
   13: 920.0
@@ -269,3 +270,80 @@ bmr_rent_2_persons:
   85: 1020.0
   95: 767.5
   97: 770.0
+
+ ## Jurisdiction-level inclusionary rates--PLACEHOLDER VALUES.
+ ## These are not actual levels. They contain a .12 value for all
+ ## cities with a "Y" in the inclusionary housing field in Pedro's
+ ## BayAreaHousingPoliciesALL100614.xlsx
+inclusionary_rates:
+  1: 0.12
+  2: 0.12
+  3: 0.12
+  4: 0.12
+  5: 0.12
+  8: 0.12
+  9: 0.12
+  10: 0.12
+  11: 0.12
+  12: 0.0
+  14: 0.12
+  15: 0.12
+  16: 0.0
+  17: 0.12
+  19: 0.12
+  21: 0.12
+  23: 0.0
+  24: 0.12
+  25: 0.12
+  26: 0.12
+  27: 0.12
+  29: 0.12
+  30: 0.0
+  31: 0.0
+  32: 0.12
+  34: 0.12
+  37: 0.12
+  38: 0.12
+  39: 0.12
+  40: 0.12
+  41: 0.12
+  44: 0.0
+  46: 0.0
+  47: 0.12
+  48: 0.12
+  49: 0.12
+  50: 0.12
+  51: 0.12
+  53: 0.12
+  55: 0.12
+  65: 0.12
+  68: 0.12
+  70: 0.0
+  71: 0.0
+  72: 0.0
+  73: 0.12
+  74: 0.12
+  75: 0.12
+  76: 0.0
+  77: 0.12
+  78: 0.12
+  79: 0.12
+  80: 0.12
+  81: 0.12
+  82: 0.0
+  83: 0.12
+  84: 0.0
+  87: 0.12
+  88: 0.12
+  89: 0.12
+  90: 0.12
+  91: 0.0
+  92: 0.12
+  93: 0.0
+  94: 0.12
+  96: 0.12
+  97: 0.12
+  98: 0.12
+  99: 0.0
+  100: 0.0
+  101: 0.12
