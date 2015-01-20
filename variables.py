@@ -122,8 +122,8 @@ def node_id(parcels, homesales):
 
 # these are actually functions that take parameters, but are parcel-related
 # so are defined here
-@sim.injectable('parcel_average_price', autocall=False)
-def parcel_average_price_COPY(use, quantile=.5):
+@sim.injectable('parcel_average_price_ORIG', autocall=False)
+def parcel_average_price_ORIG(use, quantile=.5):
     # I'm testing out a zone aggregation rather than a network aggregation
     # because I want to be able to determine the quantile of the distribution
     # I also want more spreading in the development and not keep it so localized
@@ -144,28 +144,115 @@ def parcel_average_price_COPY(use, quantile=.5):
                         sim.get_table('parcels').node_id)
 
 
+
 @sim.injectable('parcel_average_price', autocall=False)
 def parcel_average_price(use, quantile=.5):
+    
     # price function attentive to inclusionary housing production. 
     # their price is not set by the hedonic prices in the zone, but
     # rather are pre-set relative to HUD levels fetched by jurisdiction 
     # from a lookup table
     
     settings = sim.settings
+    
     if use == "residential":
+            
+        parcels = sim.get_table('parcels').to_frame()
+        buildings = sim.get_table('buildings').to_frame()
+        
+        ## segment inclusionary jurisdictions
+
+        ## Step 1: fetch parcel-level rates--some of these may be zero, which is OK.
+        ## Then there will just be no inclusionary units built for these jurisdictions
+
+        parcels['inclusionary_rate']=parcels.city_id.map(inclusionary_rates)
+
+
+        ## Step 2: Calculate revenue for inclusionary cut
+
+        bmr_prices = sim.get_table('HUD_below_market_rate_rent').to_frame()
+
+        REV_PER_MO_PER_UNIT = bmr_prices['2-Person'].to_dict()
+        SQFT_PER_UNIT = 1000 ## this is a placeholder value
+        CAP_RATE = .06 ## surely there is a cap rate defined in the model system we can plug here
+
+        
+        ## get county-level expected sales revenue per SF for the inclusionary square feet. 
+        ## watch out for possible built-in conversions btw rent/own valuations.
+        ## this yields values around $200 per square foot, give or take, about a third
+        ## of the market rate estimates currently
+
+        rev_per_mo_per_sqft = pd.Series(REV_PER_MO_PER_UNIT).\
+            apply(lambda x: x/SQFT_PER_UNIT*12/CAP_RATE).to_dict()
+
+
+        ## Step 3: Push these county-level BMR estimates (generic) to the parcel level, going
+        ## through county-to-city-to-parcel-level relationships.
+
+        county_id_to_fips=sim.get_injectable('county_id_to_fips')
+        parcels['incl_price_per_sf'] = parcels.county_id.fillna(-1).astype(np.int64).map(county_id_to_fips).map(rev_per_mo_per_sqft)
+
+
+        ## Step 4: Do the actual parcel-level weighting of revenue
+
+        # A: Market rate
+        market_rate = misc.reindex(buildings.residential_price[buildings.general_type == "Residential"].\
+                            groupby(buildings.zone_id).quantile(quantile),
+                            sim.get_table('parcels').zone_id) 
+
+
+        
+        ## B: Inclusionary rates
+        
+        inclusionary_rates = sim.get_injectable('inclusionary_rates')
+        s_inclusionary_rates = pd.Series(inclusionary_rates)
+        
+        ## get list of cities w inclusionary rates larger than 0
+        inclusionary_cities = s_inclusionary_rates[s_inclusionary_rates>0].to_dict().keys()
+
+        city_has_inclusionary = s_inclusionary_rates[s_inclusionary_rates>0].to_dict()
+        parcels['incl_rate'] = parcels.city_id.fillna(-1).astype(np.int64).map(city_has_inclusionary).fillna(0)
+        
+
+        ## Actual weighting. This should be fine--jurisdictions with zero inclusionary
+        ## will have a zero in the first term, and 100% of the market rate in the second.
+
+        return parcels['incl_rate'] * parcels['incl_price_per_sf'] + (1-parcels['incl_rate'])* market_rate
+
+
+    if 'nodes' not in sim.list_tables():
+        return pd.Series(0, sim.get_table('parcels').index)
+
+    return misc.reindex(sim.get_table('nodes')[use],
+                        sim.get_table('parcels').node_id)
+
+    
+@sim.injectable('parcel_average_price2', autocall=False)
+def parcel_average_price2(use, quantile=.5):
+    # price function attentive to inclusionary housing production. 
+    # their price is not set by the hedonic prices in the zone, but
+    # rather are pre-set relative to HUD levels fetched by jurisdiction 
+    # from a lookup table
+    
+    settings = sim.settings
+    inclusionary_rates = sim.get_injectable('inclusionary_rates')
+
+    if use == "residential":
+            
+
         bmr_prices = sim.get_table('HUD_below_market_rate_rent')
         bmr_prices=bmr_prices.to_frame()
         bmr_prices.index=bmr_prices.county_id
         
-        parcels = sim.get_table('parcels')
-        buildings = sim.get_table('buildings')
-        parcels.merge(bmr_prices,left_on='county_id',right_on='county_id')
+        parcels = sim.get_table('parcels').to_frame()
+        buildings = sim.get_table('buildings').to_frame()
+        p2 = parcels.merge(bmr_prices,left_on='county_id',right_on='county_id')
         
         ## is this dangerous, index-wise?
         ## TODO: add logic testing inclusionary unit rules by jurisdiction.
         ## this lookup should only be returned for such jurisdictions, and then only for a portion of units
         
-        return parcels.loc[:,'2-Person']
+        return p2#.loc[:,'2-Person']
         
     
 
