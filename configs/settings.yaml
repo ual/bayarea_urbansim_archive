@@ -261,15 +261,15 @@ county_id_to_fips:
 
 ## FIPS-level bmr monthly rent 2 person unit. From HUD
 bmr_rent_2_persons:
-  1: 920.0
-  13: 920.0
-  41: 1107.5
-  55: 825.0
-  75: 1107.5
-  81: 1107.5
-  85: 1020.0
-  95: 767.5
-  97: 770.0
+ 1: 920.0
+ 13: 920.0
+ 41: 1107.5
+ 55: 825.0
+ 75: 1107.5
+ 81: 1107.5
+ 85: 1020.0
+ 95: 767.5
+ 97: 770.0
 
  ## Jurisdiction-level inclusionary rates--PLACEHOLDER VALUES.
  ## These are not actual levels. They contain a .12 value for all
