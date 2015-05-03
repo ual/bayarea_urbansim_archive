@@ -208,8 +208,7 @@ def parcel_average_price(use, quantile=.5):
         market_rate = misc.reindex(buildings.residential_price[buildings.general_type == "Residential"].\
                             groupby(buildings.zone_id).quantile(quantile),
                             sim.get_table('parcels').zone_id) 
-
-     
+ 
         ## B: Inclusionary rates
         
         inclusionary_rates = sim.get_injectable('inclusionary_rates')
