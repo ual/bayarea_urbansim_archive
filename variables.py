@@ -157,75 +157,98 @@ def parcel_average_price(use, quantile=.5):
     
     if use == "residential":
             
+        # ## STEP 1: Get main tables
+
         parcels = sim.get_table('parcels')#.to_frame()
         buildings = sim.get_table('buildings')#.to_frame()
-        
-        ## segment inclusionary jurisdictions
 
-        ## STEP  1: fetch parcel-level rates--some of these may be zero, which is OK.
-        ## Then there will just be no inclusionary units built for these jurisdictions
+        from urbansim.developer import sqftproforma
 
-        #parcels['inclusionary_rate']=parcels.city_id.map(inclusionary_rates)
+        # ## STEP 2: Calculate generic revenue for inclusionary units affordable to 50% AMI
+        # Below follows a simple calculation of revenue assuming units are built for 2-person households earning 50% of AMI pay 30% of their income on housing.
 
-        ## STEP 2: Calculate revenue for inclusionary cut
+
+        ## for this lookup to work, the table needs to be registered in bayarea_urbansim/datasources.py
 
         bmr_prices = sim.get_table('HUD_below_market_rate_rent')
 
-        ## for now, county-level HUD 2-person households are used as a placeholder
-        ## rent target assumption
-        
+        # ## For now, county-level HUD 2-person households are used as a placeholder rent target assumption
+
+
         rev_per_mo_per_unit = bmr_prices['2-Person'].to_dict()
-        
-        ## we need to translate the revenue per unit to a per square footage measure
-        ## TODO: There are likely real values in urbansim somewhere for the below constants.
-        ## Just keep thse for now as placeholder values
-        
-        SQFT_PER_UNIT = 1000 
-        CAP_RATE = .06
-        
-        ## get county-level expected sales *revenue per SF* for the inclusionary square feet. 
-        ## watch out for possible built-in conversions btw rent/own valuations.
-        ## this yields values around $200 per square foot, give or take, about *a third*
-        ## of the market rate estimates currently. This seems low, but not crazy.
 
-        rev_per_mo_per_sqft = pd.Series(rev_per_mo_per_unit).\
-            apply(lambda x: x/ SQFT_PER_UNIT*12 / CAP_RATE).to_dict()
+        # ## We need to translate the revenue per unit to a per square footage measure, in yearly terms
+        # For this we need some translator constants. We grab from the model settings:
+
+        SQFT_PER_UNIT = settings['residential_developer']['min_unit_size']
+        CAP_RATE = sqftproforma.SqFtProForma().config.cap_rate
+
+        # ## Get county-level expected sales *yearly revenue per sq ft* for the inclusionary square feet. 
+        # 
+        # Watch out for possible built-in conversions btw rent/own valuations--here we just assume sales.
+        # 
+        # TODO: we should use the existing rent / own conversion interface instead.
+        # 
+        # This yields values around $265 per square foot, give or take, maybe about a third to a half
+        # of the market rate estimates currently, depending on the place. This seems low, but not crazy.
+
+        rev_per_sqft = pd.Series(rev_per_mo_per_unit).apply(lambda x: x/ SQFT_PER_UNIT*12 / CAP_RATE).to_dict()
 
 
-        ## STEP 3: Push these county-level BMR revenue estimates (generic) to the parcel level, going
-        ## through county-to-city-to-parcel-level relationships. Probably not necessary to actually
-        ## store on the parcels table
+        # ## STEP 3: Push these county-level BMR revenue per sq ft estimates (generic) to the parcel level, going through county-to-city-to-parcel-level relationships.
+        # 
+        # 
+        # Note that since the HUD numbers came at the county level, all parcels in the same county will
+        # have the same estimated revenue per square foot for any inclusionary unit.
+        # 
+        # TODO: a bunch of these temporary variables we probably don't need to store in the parcel table--we just need them temporarily, so they could just be series.
 
+        ## fetch a translator of arbitrary county ids in urbansim to FIPS codes, since many official data sources use FIPS codes
         county_id_to_fips=sim.get_injectable('county_id_to_fips')
-        
-        parcels['incl_price_per_sf'] = parcels.county_id.fillna(-1).\
-        astype(np.int64).map(county_id_to_fips).map(rev_per_mo_per_sqft)
 
 
-        ## STEP 4: Do the actual parcel-level weighting of revenue
+        ## translate county id to FIPS, then map this to FIPS-level revenue per square foot calculated earlier. 
 
-        # A: Market rate
-        market_rate = misc.reindex(buildings.residential_price[buildings.general_type == "Residential"].\
-                            groupby(buildings.zone_id).quantile(quantile),
-                            sim.get_table('parcels').zone_id) 
- 
-        ## B: Inclusionary rates
-        
+        parcels['incl_price_per_sf'] = parcels.county_id.fillna(-1).astype(np.int64).map(county_id_to_fips).map(rev_per_sqft)
+
+
+        # ## STEP 4: Do the actual parcel-level weighting of revenue
+        # 
+        # First we take building-level `residential_price` data for residential buildings, take the median in the zone, and then push this number back to the parcel level. 
+        # 
+        ## TODO: res hedonic model needs to be run and simulated first to get a buildings table output; otherwise zeroes will result. This does not currently happen, so `residential_price` is 0 across the board. This needs to be fixed before any practical use and evaluation.
+        ## so in theory this should return meaningful values, but `residential_price` is full of zeroes. 
+        ## Fletcher or Mike probably have a more 'live' version of the buildings table. 
+        ## Or we could just merge hedonic estimates on manually. Anyway, we continue the exercise just to get the bindings set up.
+
+        market_rate = misc.reindex(buildings.residential_price[buildings.general_type == "Residential"].groupby(buildings.zone_id).quantile(quantile), sim.get_table('parcels').zone_id) 
+
+        # Then we grab jurisdiction-level data on presence of inclusionary programs, for which purpose we have a lookup table / injectable called `inclusionary_rates` with a row for each `jurisdiction_id`. What are rates in these jurisdictions (at the city level)?
+        # Note that these are placeholder values--we don't have a compilation of such rates, but ABAG is going to be collecting them over the summer. For now, we just assumed 12 percent for jurisdictions we know have SOME inclusionary program. This needs to be checked.
+
+
+        ## load inclusionary rates, indexed on the 100+ jurisdiction ids. Whatever these jurisdictions actually are used to be stored on Paris.
         inclusionary_rates = sim.get_injectable('inclusionary_rates')
-        parcels['inclusionary_rate']=parcels.city_id.map(inclusionary_rates)
         s_inclusionary_rates = pd.Series(inclusionary_rates)
-        
-        ## get list of cities w inclusionary rates larger than 0
-        inclusionary_cities = s_inclusionary_rates[s_inclusionary_rates>0].to_dict().keys()
+
+        # Then, flag cities w inclusionary rates larger than 0, and send this values to parcels.
 
         city_has_inclusionary = s_inclusionary_rates[s_inclusionary_rates>0].to_dict()
         parcels['incl_rate'] = parcels.city_id.fillna(-1).astype(np.int64).map(city_has_inclusionary).fillna(0)
-        
 
-        ## Actual weighting. This should be fine--jurisdictions with zero inclusionary
-        ## will have a zero in the first term, and 100% of the market rate in the second.
+        # the first 153,000 parcels are San Francisco ones, so they all have 12% incl rates
 
+        # ## Result: A weighted avg of the market rate and inclusionary hsg constrained revenue assumption
+        # Assuming a small-ish inclusionary rate, the number should be close to, but lower than, the market rate sales revenue per sf. This should be safe to calculate even for jurisdictions with no inclusionary policy--jurisdictions with zero inclusionary will just have a zero in the first term, and 100% of the market rate in the second.
+
+
+        ## eg. .12           * 332.25                       + (1-.12)                 * 800
         return parcels['incl_rate'] * parcels['incl_price_per_sf'] + (1-parcels['incl_rate'])* market_rate
+
+        # ## Further work needed:
+        # * What this does is mainly change the cost structure of feasibility, meaning they are slightly less profitable in jurisdictions with inclsionary requirements. Note that there is no treatment of the incidence of this 'tax'--perhaps it is passed on to the consumer as much as being borne by the developer--if so, cost shifters should adjust overall prices levels for jurisdictions with such policies on the books. It goes without saying that the market rate prices need to NOT be all zeroes as they currently exist in my version of the buildings table. It may just be a matter of writing the output from the hedonic estimation to the table in the main datastore.
+        # * Secondly, units actually produced in these jurisdictions need to be flagged and accounted for so they are visible in the household location choice model. A decision needs to be made as to the nature of this flag. It may be desirable to move to a unit-level representation--each unit becomes a row in a table and is maintained during the simulation, with appropriate attributes describing size, deed-restricted affordability, tenure, etc. Currently, some of this lives in the `buildings` table. If such a migration of unit of analysis were to happen, the hedonic model would need to leave deed restricted units alone.
+        # * Third, there is no real distinction between owner and renter units. That may be desirable, even if Costa-Hawkins means less rental affordable units produced.
 
 
     if 'nodes' not in sim.list_tables():
