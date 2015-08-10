@@ -1,3 +1,6 @@
+# can't figure out how to get the profiling to work when running this as a 
+# script, so instead i'm doing it in the notebook
+
 import models
 import urbansim.sim.simulation as sim
 
