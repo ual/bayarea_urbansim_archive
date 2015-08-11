@@ -3,6 +3,10 @@ bayarea
 
 This is the full UrbanSim implementation for the Bay Area.
 
+estimation-test branch
+=======
+This branch was set up to diagnose and test the MNL estimation problems using a clean copy of the codebase. This work is in the `estimation-test` directory. There are no changes to the underlying code. 
+
 data
 =======
 Simulation.py has specific data requirements, which are outlined in the Makefile of this repository, under the target `data:`.
